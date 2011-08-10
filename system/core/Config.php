@@ -240,6 +240,41 @@ class CI_Config {
 		{
 			return $this->slash_item('base_url').$this->item('index_page');
 		}
+		
+        $CI = get_instance();
+        if     (func_num_args() > 1) $uri = implode('/', func_get_args());
+        elseif (is_array($uri))      $uri = implode('/', $uri);
+
+        if (in_array($uri, $CI->router->routes))
+        {
+           $uri = array_search($uri, $CI->router->routes);
+        }    
+        else foreach ($CI->router->routes as $route => $replace)
+        {
+            $route   = preg_split('/(\(.+?\))/', $route,-1,PREG_SPLIT_DELIM_CAPTURE);
+            $replace = preg_split('/(\$\d+)/', $replace,-1,PREG_SPLIT_DELIM_CAPTURE);
+            if (count($route) != count($replace)) continue;
+
+            $newroute = $newreplace = '';
+            for ($i=0; $i < count($route); $i++)
+                if ($i % 2)
+                {
+                    $newroute .= $replace[$i];
+                    $newreplace .= $route[$i];
+                }
+                else
+                {
+                    $newroute .= $route[$i];
+                    $newreplace .= $replace[$i];
+                }
+            $newreplace = str_replace(':any', '.+', str_replace(':num', '[0-9]+', $newreplace));
+
+            if (preg_match("#^$newreplace\$#", $uri))
+            {
+                $uri = preg_replace("#^$newreplace\$#", $newroute, $uri);
+                break;
+            }
+        }
 
 		if ($this->item('enable_query_strings') == FALSE)
 		{
